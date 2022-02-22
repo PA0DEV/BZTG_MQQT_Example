@@ -1,0 +1,13 @@
+{
+    "profiles": [
+        {
+            "ssid": "BZTG-IoT",
+            "pass": "WerderBremen24",
+            "dhcp": true,
+            "gateway": "",
+            "subnet": "",
+            "clientIP": "",
+            "dns": ""
+        }
+    ]
+}
