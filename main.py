@@ -17,7 +17,7 @@
 # ----------------------------------------
 ## Initialize i2c for sensor and the sensor ##
 from machine import SoftI2C, Pin
-from libraries import HTU2X
+from libraries import HTU2X, bh1750
 try:
      import uasyncio as asyncio
 except:
@@ -33,11 +33,15 @@ temp = None
 
 global humid
 humid = None
+
+global luminance
+luminance = None
 # ----------------------------------------
-## Initialize i2c for sensor and the sensor ##
+## Initialize i2c for sensor and the sensors ##
 busSens = SoftI2C(scl=Pin(22), sda=Pin(21), freq=100000)
 
 humidSens = HTU2X.HTU21D(busSens)
+lightSens = bh1750.BH1750(busSens)
 
 # ----------------------------------------
 wlan = wifiManager.getConnection()
@@ -53,7 +57,7 @@ else:
 
 
 # ----------------------------------------
-## methods to mesure temp and humid async and smooth values ##
+## methods to mesure temp, humid and light density async and smooth values ##
 async def mesureTmp(num):
     global temp
     while True:
@@ -91,18 +95,36 @@ async def mesureHumid(num):
         humid = round(ret, 0)
         print("Humid: %4.1f %%" %humid)
 
+async def mesureLuminance(num):
+    global luminance
+    while True:
+        lumiList = []
+        for i in range(num):
+            lum = lightSens.luminance(bh1750.BH1750.ONCE_HIRES_1)
+            lumiList.append(lum)
+            await asyncio.sleep_ms(1000)
 
+        lumiList.sort()
+        lumiList.pop(0)
+        lumiList.pop()
+
+        ret = sum(lumiList) / len(lumiList)
+
+        luminance = round(ret, 0)
+        print("Luminance: %4.1f Lux" %humid)
 
 async def SendData():
     global temp
     global humid
+    global luminance
     oldTemp = None
     oldHumid = None
+    oldLum = None
 
     while True:
-        if temp != oldTemp and humid != oldHumid:
+        if temp != oldTemp or humid != oldHumid or luminance != oldLum:
             print("[MQTT] Connecting...")
-            msg = str("{\"temperature\": \"%4.1f\", \"humid\": \"%4.0f\"}" %(temp, humid))
+            msg = str("{\"temperature\": \"%4.1f\", \"humid\": \"%4.0f\", \"luminance\": %4.1f}" %(temp, humid, luminance))
 
             mqtt.connect()
             print("[MQTT] Sending data...")
@@ -112,18 +134,16 @@ async def SendData():
             mqtt.disconnect()
             oldTemp = temp
             oldHumid = humid
+            oldLum = luminance
         await asyncio.sleep(1)
-        
-
-
     
 
 async def run():
-    #t0 = asyncio.create_task(wifiMgr())
     t2 = asyncio.create_task(mesureHumid(10))
     t1 = asyncio.create_task(mesureTmp(10))
+    t4 = asyncio.create_task(mesureLuminance(10))
     t3 = asyncio.create_task(SendData())
     
-    await t2, t1, t3
+    await t1, t2, t3, t4
 
 asyncio.run(run())
