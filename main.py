@@ -111,7 +111,7 @@ async def mesureLuminance(num):
         ret = sum(lumiList) / len(lumiList)
 
         luminance = round(ret, 0)
-        print("Luminance: %4.1f Lux" %humid)
+        print("Luminance: %4.1f Lux" %luminance)
 
 async def SendData():
     global temp
@@ -123,18 +123,23 @@ async def SendData():
 
     while True:
         if temp != oldTemp or humid != oldHumid or luminance != oldLum:
-            print("[MQTT] Connecting...")
-            msg = str("{\"temperature\": \"%4.1f\", \"humid\": \"%4.0f\", \"luminance\": %4.1f}" %(temp, humid, luminance))
+            try:
+                print("[MQTT] Connecting...")
+                msg = str("{\"temperature\": \"%4.1f\", \"humid\": \"%4.0f\", \"luminance\": %4.1f}" %(temp, humid, luminance))
 
-            mqtt.connect()
-            print("[MQTT] Sending data...")
-            mqtt.publish(b"Climate", msg)
-            print("[MQTT] Data sent!")
-            print()
-            mqtt.disconnect()
-            oldTemp = temp
-            oldHumid = humid
-            oldLum = luminance
+                mqtt.connect()
+                print("[MQTT] Sending data...")
+                mqtt.publish(b"Climate", msg)
+                print("[MQTT] Data sent!")
+                print()
+                mqtt.disconnect()
+                oldTemp = temp
+                oldHumid = humid
+                oldLum = luminance
+
+            except:
+                print("[MQTT] Could not reach server...")
+                print("[MQTT] No data sent!")
         await asyncio.sleep(1)
     
 
